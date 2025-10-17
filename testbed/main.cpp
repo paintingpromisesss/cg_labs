@@ -50,7 +50,7 @@ namespace
         VkDeviceMemory memory;
     };
 
-    struct Cone
+    struct Cone // Структура для хранения конуса и его переменных
     {
         Vector position;
         Vector rotation_axis;
@@ -70,9 +70,8 @@ namespace
     VulkanBuffer vertex_buffer;
     VulkanBuffer index_buffer;
 
-    std::vector<Cone> cones;
-    float last_time = 0.0f;
-    int selected_tab = 0;
+    std::vector<Cone> cones; // Вектор для хранения всех конусов
+    float last_time = 0.0f;  // Время последнего кадра
     Matrix identity()
     {
         Matrix result{};
@@ -500,23 +499,23 @@ namespace
         //  |   `--,   |
         //  |       \  |
         // (v3)------(v2)
-        std::vector<Vertex> vertices(CONE_SEGMENTS + 1);
-        std::vector<uint32_t> indices(CONE_SEGMENTS * 3);
+        std::vector<Vertex> vertices(CONE_SEGMENTS + 1);  // Вектор вершин конуса (1 вершина + CONE_SEGMENTS вершин основания)
+        std::vector<uint32_t> indices(CONE_SEGMENTS * 3); // Вектор индексов (каждый сегмент - 1 треугольник, 3 индекса на треугольник)
 
-        vertices[0] = {{0.0f, cone_height / 2.0f, 0.0f}};
+        vertices[0] = {{0.0f, cone_height / 2.0f, 0.0f}}; // вершина конуса
 
-        for (int i = 0; i < CONE_SEGMENTS; i++)
+        for (int i = 0; i < CONE_SEGMENTS; i++) // Все вершины основания
         {
-            float angle = (2.0f * M_PI * i) / CONE_SEGMENTS;
-            float x = cone_radius * cosf(angle);
-            float z = cone_radius * sinf(angle);
+            float angle = (2.0f * M_PI * i) / CONE_SEGMENTS; // угол текущей вершины
+            float x = cone_radius * cosf(angle);             // координата X
+            float z = cone_radius * sinf(angle);             // координата Z
 
-            vertices[i + 1] = {{x, -cone_height / 2.0f, z}};
+            vertices[i + 1] = {{x, -cone_height / 2.0f, z}}; // добавляем вершину основания
         }
 
-        for (int i = 0; i < CONE_SEGMENTS; i++)
+        for (int i = 0; i < CONE_SEGMENTS; i++) // Все индексы треугольников
         {
-            indices[i * 3 + 0] = 0;                           // вершина конуса
+            indices[i * 3] = 0;                           // вершина конуса
             indices[i * 3 + 1] = i + 1;                       // текущая точка окружности
             indices[i * 3 + 2] = (i + 1) % CONE_SEGMENTS + 1; // следующая точка окружности
         }
@@ -588,6 +587,7 @@ namespace
                     ImGui::InputFloat3("Position", reinterpret_cast<float *>(&cone.position));
                     ImGui::InputFloat3("Rotation Axis", reinterpret_cast<float *>(&cone.rotation_axis));
                     ImGui::SliderFloat("Rotation Speed", &cone.rotation_speed, -5.0f, 5.0f);
+                    ImGui::SliderFloat("Rotation", &cone.rotation, 0.0f, 2.0f * M_PI);
                     ImGui::ColorEdit3("Color", reinterpret_cast<float *>(&cone.color));
                     ImGui::SliderFloat("Scale", &cone.scale, 0.1f, 5.0f);
                     ImGui::Checkbox("Spin?", &cone.spin);
@@ -662,7 +662,7 @@ namespace
             vkCmdBindIndexBuffer(cmd, index_buffer.buffer, offset, VK_INDEX_TYPE_UINT32);
 
             // NOTE: Variables like model_XXX were declared globally
-            for (const Cone &cone : cones)
+            for (const Cone &cone : cones) // Рисование каждого конуса
             {
                 Matrix scale_matrix = identity();
                 scale_matrix.m[0][0] = cone.scale;
