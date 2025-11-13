@@ -19,8 +19,8 @@
 
 namespace {
 
-constexpr uint32_t window_default_width = 1280;
-constexpr uint32_t window_default_height = 720;
+constexpr uint32_t window_default_width = 1920; // WINDOW WIDTH
+constexpr uint32_t window_default_height = 1080; // WINDOW HEIGHT
 constexpr char window_title[] = "Veekay";
 
 constexpr uint32_t max_frames_in_flight = 2;
@@ -94,31 +94,28 @@ int veekay::run(const veekay::ApplicationInfo& app_info) {
 	}
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-
+	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE); 
+	
 	window = glfwCreateWindow(window_default_width, window_default_height,
 	                          window_title, nullptr, nullptr);
 	if (!window) {
 		std::cerr << "Failed to create GLFW window\n";
 		return 1;
 	}
+	
+	glfwSetWindowSize(window, window_default_width, window_default_height);
+	glfwSetWindowSizeLimits(window, window_default_width, window_default_height,
+	                        window_default_width, window_default_height);
+	
+	glfwPollEvents();
 
 	veekay::input::setup(window);
 
-	/* NOTE:
-		needed because otherwise on macos everything will be rendered in the top
-		corner of the application window
-	*/
-#if defined(__APPLE__) && defined(__MACH__)
 	int framebuffer_width, framebuffer_height;
 	glfwGetFramebufferSize(window, &framebuffer_width, &framebuffer_height);
-
-	app.window_width = framebuffer_width;
-	app.window_height = framebuffer_height;
-#else
-	app.window_width = window_default_width;
-	app.window_height = window_default_height;
-#endif
+	
+	app.window_width = static_cast<uint32_t>(framebuffer_width);
+	app.window_height = static_cast<uint32_t>(framebuffer_height);
 
 	{ // NOTE: Initialize Vulkan: grab device and create swapchain
 		vkb::InstanceBuilder instance_builder;
