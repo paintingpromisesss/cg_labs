@@ -8,11 +8,11 @@ layout (location = 0) out vec3 f_position;
 layout (location = 1) out vec3 f_normal;
 layout (location = 2) out vec2 f_uv;
 
-layout (binding = 0, std140) uniform SceneUniforms {
+layout (set = 0, binding = 0, std140) uniform SceneUniforms {
 	mat4 view_projection;
 };
 
-layout (binding = 1, std140) uniform ModelUniforms {
+layout (set = 0, binding = 1, std140) uniform ModelUniforms {
 	mat4 model;
 	vec3 albedo_color;
 };
