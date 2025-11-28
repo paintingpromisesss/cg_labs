@@ -40,7 +40,8 @@ struct LightSource {
 	float cone_angle; // Угол конуса для spot (в градусах)
 	
 	uint type;        // 0=directional, 1=point, 2=spot
-	uint _pad[3];
+	uint enabled;     // Включён ли источник (0=выкл, 1=вкл)
+	uint _pad[2];
 };
 
 // Storage buffer: массив всех источников света
@@ -58,6 +59,10 @@ vec3 calculateLighting(vec3 normal, vec3 view_dir) {
 	// Проходим по всем источникам света
 	for (uint i = 0u; i < num_lights; ++i) {
 		LightSource light = lights[i];
+		
+		// Пропускаем выключенные источники
+		if (light.enabled == 0u) continue;
+		
 		vec3 light_dir;       // Направление к источнику
 		float attenuation = 1.0;  // Коэффициент затухания
 		

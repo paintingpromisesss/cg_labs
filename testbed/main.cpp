@@ -57,7 +57,8 @@ namespace
         float cone_angle;   // Угол конуса в градусах (только для spot)
 
         uint32_t type;    // Тип: 0=directional, 1=point, 2=spot
-        uint32_t _pad[3]; // Padding для выравнивания в std430
+        uint32_t enabled; // Включён ли источник света (0=выкл, 1=вкл)
+        uint32_t _pad[2]; // Padding для выравнивания в std430
     };
 
     // Глобальные параметры освещения сцены
@@ -800,6 +801,7 @@ namespace
             .color = {1.0f, 0.95f, 0.8f},
             .cone_angle = 0.0f,
             .type = 0, // directional
+            .enabled = 1,
         });
 
         // 2. Point light - как лампочка, затухает с расстоянием
@@ -811,6 +813,7 @@ namespace
             .color = {1.0f, 0.3f, 0.2f},
             .cone_angle = 0.0f,
             .type = 1, // point
+            .enabled = 1,
         });
 
         // 3. Spot light - как фонарик, светит конусом
@@ -822,6 +825,7 @@ namespace
             .color = {0.2f, 0.5f, 1.0f},
             .cone_angle = 35.0f,
             .type = 2, // spot
+            .enabled = 1,
         });
     }
 
@@ -887,6 +891,12 @@ namespace
             if (ImGui::CollapsingHeader(light_label.c_str()))
             {
                 std::string prefix = "##light" + std::to_string(i);
+
+                bool enabled = light.enabled != 0;
+                if (ImGui::Checkbox(("Enabled" + prefix).c_str(), &enabled))
+                {
+                    light.enabled = enabled ? 1 : 0;
+                }
 
                 ImGui::Combo(("Type" + prefix).c_str(), (int *)&light.type, light_types, 3);
 
