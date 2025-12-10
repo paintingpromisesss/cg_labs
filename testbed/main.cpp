@@ -5,6 +5,7 @@
 #include <iostream>
 #include <fstream>
 #include <cmath>
+#include <algorithm>
 
 #include <veekay/veekay.hpp>
 
@@ -129,6 +130,9 @@ struct Camera {
 
 	// NOTE: View matrix of camera (inverse of a transform)
 	veekay::mat4 view() const;
+	veekay::vec3 forward() const;
+	veekay::vec3 right() const;
+	veekay::vec3 up_direction() const;
 
 	// NOTE: View and projection composition
 	veekay::mat4 view_projection(float aspect_ratio) const;
@@ -196,12 +200,47 @@ veekay::mat4 Transform::matrix() const {
 	return t;
 }
 
+veekay::vec3 Camera::forward() const {
+	float pitch = toRadians(rotation.x);
+	float yaw = toRadians(rotation.y);
+
+	veekay::vec3 dir{
+		std::sin(yaw) * std::cos(pitch),
+		std::sin(pitch),
+		std::cos(yaw) * std::cos(pitch),
+	};
+
+	veekay::vec3 n = normalize(dir);
+	if (n.x == 0.0f && n.y == 0.0f && n.z == 0.0f) {
+		return {0.0f, 0.0f, 1.0f};
+	}
+	return n;
+}
+
+veekay::vec3 Camera::right() const {
+	veekay::vec3 world_up{0.0f, 1.0f, 0.0f};
+	veekay::vec3 r = cross(world_up, forward());
+	r = normalize(r);
+	if (r.x == 0.0f && r.y == 0.0f && r.z == 0.0f) {
+		return {1.0f, 0.0f, 0.0f};
+	}
+	return r;
+}
+
+veekay::vec3 Camera::up_direction() const {
+	veekay::vec3 u = cross(forward(), right());
+	u = normalize(u);
+	if (u.x == 0.0f && u.y == 0.0f && u.z == 0.0f) {
+		return {0.0f, 1.0f, 0.0f};
+	}
+	return u;
+}
+
 veekay::mat4 Camera::view() const {
-	// TODO: Rotation
-
-	auto t = veekay::mat4::translation(-position);
-
-	return t;
+	const veekay::vec3 eye = position;
+	const veekay::vec3 front = forward();
+	const veekay::vec3 center{eye.x + front.x, eye.y + front.y, eye.z + front.z};
+	return lookAt(eye, center, up_direction());
 }
 
 veekay::mat4 Camera::view_projection(float aspect_ratio) const {
@@ -1040,45 +1079,68 @@ void shutdown() {
 	vkDestroyImageView(device, shadow_image_view, nullptr);
 	vkFreeMemory(device, shadow_image_memory, nullptr);
 	vkDestroyImage(device, shadow_image, nullptr);
-}
-
-void update(double time) {
-	if (!ImGui::IsWindowHovered()) {
-		using namespace veekay::input;
-
-		if (mouse::isButtonDown(mouse::Button::left)) {
-			auto move_delta = mouse::cursorDelta();
-
-			// TODO: Use mouse_delta to update camera rotation
-			
-			auto view = camera.view();
-
-			// TODO: Calculate right, up and front from view matrix
-			veekay::vec3 right = {1.0f, 0.0f, 0.0f};
-			veekay::vec3 up = {0.0f, -1.0f, 0.0f};
-			veekay::vec3 front = {0.0f, 0.0f, 1.0f};
-
-			if (keyboard::isKeyDown(keyboard::Key::w))
-				camera.position += front * 0.1f;
-
-			if (keyboard::isKeyDown(keyboard::Key::s))
-				camera.position -= front * 0.1f;
-
-			if (keyboard::isKeyDown(keyboard::Key::d))
-				camera.position += right * 0.1f;
-
-			if (keyboard::isKeyDown(keyboard::Key::a))
-				camera.position -= right * 0.1f;
-
-			if (keyboard::isKeyDown(keyboard::Key::q))
-				camera.position += up * 0.1f;
-
-			if (keyboard::isKeyDown(keyboard::Key::z))
-				camera.position -= up * 0.1f;
-		}
 	}
 
-	float aspect_ratio = float(veekay::app.window_width) / float(veekay::app.window_height);
+	void update(double time) {
+		float aspect_ratio = float(veekay::app.window_width) / float(veekay::app.window_height);
+
+	using namespace veekay::input;
+	ImGuiIO& io = ImGui::GetIO();
+
+	static double previous_time = time;
+	double delta_time = time - previous_time;
+	previous_time = time;
+	if (delta_time < 0.0)
+		delta_time = 0.0;
+	float dt = static_cast<float>(delta_time);
+
+	static float movement_speed = 8.0f;
+	static float mouse_sensitivity = 0.2f;
+
+	ImGui::Begin("Camera");
+	ImGui::TextUnformatted("W/S/A/D - move, Q/E - up/down");
+	ImGui::TextUnformatted("Hold LMB and drag to look around");
+	ImGui::SliderFloat("Move speed", &movement_speed, 0.1f, 20.0f);
+	ImGui::SliderFloat("Mouse sensitivity", &mouse_sensitivity, 0.01f, 1.0f);
+	ImGui::End();
+
+	if (!io.WantCaptureMouse && mouse::isButtonDown(mouse::Button::left)) {
+		mouse::setCaptured(true);
+		veekay::vec2 delta = mouse::cursorDelta();
+		camera.rotation.x = std::clamp(camera.rotation.x - delta.y * mouse_sensitivity, -89.0f, 89.0f);
+		camera.rotation.y -= delta.x * mouse_sensitivity;
+		if (camera.rotation.y > 360.0f || camera.rotation.y < -360.0f) {
+			camera.rotation.y = std::fmod(camera.rotation.y, 360.0f);
+		}
+		if (camera.rotation.y < 0.0f) {
+			camera.rotation.y += 360.0f;
+		}
+	} else {
+		mouse::setCaptured(false);
+	}
+
+	if (!io.WantCaptureKeyboard) {
+		float velocity = movement_speed * dt;
+		if (velocity <= 0.0f) {
+			velocity = movement_speed * 0.016f;
+		}
+		veekay::vec3 front = camera.forward();
+		veekay::vec3 right = camera.right();
+		veekay::vec3 world_up{0.0f, 1.0f, 0.0f};
+
+		if (keyboard::isKeyDown(keyboard::Key::w))
+			camera.position -= front * velocity;
+		if (keyboard::isKeyDown(keyboard::Key::s))
+			camera.position += front * velocity;
+		if (keyboard::isKeyDown(keyboard::Key::d))
+			camera.position -= right * velocity;
+		if (keyboard::isKeyDown(keyboard::Key::a))
+			camera.position += right * velocity;
+		if (keyboard::isKeyDown(keyboard::Key::q))
+			camera.position -= world_up * velocity;
+		if (keyboard::isKeyDown(keyboard::Key::z))
+			camera.position += world_up * velocity;
+	}
 
 	ImGui::Begin("Light");
 	ImGui::SliderFloat3("Position", &directional_light.position.x, -20.0f, 20.0f);
