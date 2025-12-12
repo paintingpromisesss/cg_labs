@@ -57,6 +57,8 @@ struct Model {
 	Mesh mesh;
 	Transform transform;
 	veekay::vec3 albedo_color;
+	veekay::graphics::Texture* texture = nullptr;
+	VkSampler* sampler = nullptr;
 };
 
 veekay::vec3 normalize(const veekay::vec3& v) {
@@ -174,6 +176,9 @@ inline namespace {
 
 	veekay::graphics::Texture* texture;
 	VkSampler texture_sampler;
+
+	veekay::graphics::Texture* wall_texture;
+	VkSampler wall_texture_sampler;
 
 	// Ресурсы для карты теней
 	VkImage shadow_image;
@@ -826,17 +831,26 @@ void initialize(VkCommandBuffer cmd) {
 		                                                pixels);
 	}
 
-	// Load texture
+	// Load texture (wall texture for all objects)
 	{
 		std::vector<unsigned char> image;
 		unsigned width, height;
-		unsigned error = lodepng::decode(image, width, height, "./lab3/assets/wood.png");
+		unsigned error = lodepng::decode(image, width, height, "./assets/steny-tekstury.png");
 
 		if (error) {
 			std::cerr << "decoder error " << error << ": " << lodepng_error_text(error) << std::endl;
-			texture = missing_texture;
+			std::cerr << "Trying alternative path..." << std::endl;
+			// Попробуем альтернативный путь
+			error = lodepng::decode(image, width, height, "./lab3/assets/wood.png");
+			if (error) {
+				std::cerr << "decoder error " << error << ": " << lodepng_error_text(error) << std::endl;
+				texture = missing_texture;
+			} else {
+				texture = new veekay::graphics::Texture(cmd, width, height, VK_FORMAT_R8G8B8A8_UNORM, image.data());
+			}
 		} else {
 			texture = new veekay::graphics::Texture(cmd, width, height, VK_FORMAT_R8G8B8A8_UNORM, image.data());
+			std::cout << "Successfully loaded steny-tekstury.png (" << width << "x" << height << ")" << std::endl;
 		}
 
 		VkSamplerCreateInfo info{
@@ -855,6 +869,10 @@ void initialize(VkCommandBuffer cmd) {
 			return;
 		}
 	}
+
+	// Копируем ту же текстуру для совместимости
+	wall_texture = texture;
+	wall_texture_sampler = texture_sampler;
 
 	{
 		VkDescriptorBufferInfo buffer_infos[] = {
@@ -1010,34 +1028,123 @@ void initialize(VkCommandBuffer cmd) {
 	}
 
 	// NOTE: Add models to scene
+	// Пол
 	models.emplace_back(Model{
 		.mesh = plane_mesh,
-		.transform = Transform{},
-		.albedo_color = veekay::vec3{1.0f, 1.0f, 1.0f}
+		.transform = Transform{
+			.scale = {2.0f, 1.0f, 2.0f}
+		},
+		.albedo_color = veekay::vec3{0.8f, 0.8f, 0.85f}
+	});
+
+	// Центральная башня из кубов
+	models.emplace_back(Model{
+		.mesh = cube_mesh,
+		.transform = Transform{
+			.position = {0.0f, -1.8f, 0.0f},
+			.scale = {0.8f, 0.4f, 0.8f}
+		},
+		.albedo_color = veekay::vec3{1.0f, 1.0f, 1.0f},
+		.texture = wall_texture,
+		.sampler = &wall_texture_sampler
 	});
 
 	models.emplace_back(Model{
 		.mesh = cube_mesh,
 		.transform = Transform{
-			.position = {-2.0f, -0.5f, -1.5f},
+			.position = {0.0f, -1.2f, 0.0f},
+			.scale = {0.7f, 0.4f, 0.7f}
 		},
-		.albedo_color = veekay::vec3{1.0f, 0.0f, 0.0f}
+		.albedo_color = veekay::vec3{1.0f, 1.0f, 1.0f},
+		.texture = wall_texture,
+		.sampler = &wall_texture_sampler
 	});
 
 	models.emplace_back(Model{
 		.mesh = cube_mesh,
 		.transform = Transform{
-			.position = {1.5f, -1.0f, -0.5f},
+			.position = {0.0f, -0.6f, 0.0f},
+			.scale = {0.6f, 0.4f, 0.6f}
 		},
-		.albedo_color = veekay::vec3{0.0f, 1.0f, 0.0f}
+		.albedo_color = veekay::vec3{1.0f, 1.0f, 1.0f},
+		.texture = wall_texture,
+		.sampler = &wall_texture_sampler
+	});
+
+	// Левая группа
+	models.emplace_back(Model{
+		.mesh = cube_mesh,
+		.transform = Transform{
+			.position = {-3.0f, -1.5f, 2.0f},
+			.scale = {1.2f, 1.0f, 1.2f}
+		},
+		.albedo_color = veekay::vec3{0.2f, 0.6f, 0.9f}
 	});
 
 	models.emplace_back(Model{
 		.mesh = cube_mesh,
 		.transform = Transform{
-			.position = {0.0f, -0.5f, 1.0f},
+			.position = {-2.5f, -1.0f, 1.0f},
+			.scale = {0.6f, 0.6f, 0.6f}
 		},
-		.albedo_color = veekay::vec3{0.0f, 0.0f, 1.0f}
+		.albedo_color = veekay::vec3{0.3f, 0.7f, 0.95f}
+	});
+
+	// Правая группа
+	models.emplace_back(Model{
+		.mesh = cube_mesh,
+		.transform = Transform{
+			.position = {3.5f, -1.7f, -1.5f},
+			.scale = {1.5f, 0.6f, 1.5f}
+		},
+		.albedo_color = veekay::vec3{0.3f, 0.9f, 0.3f}
+	});
+
+	models.emplace_back(Model{
+		.mesh = cube_mesh,
+		.transform = Transform{
+			.position = {2.8f, -1.2f, -0.5f},
+			.scale = {0.8f, 0.8f, 0.8f}
+		},
+		.albedo_color = veekay::vec3{0.4f, 0.95f, 0.4f}
+	});
+
+	// Задние объекты
+	models.emplace_back(Model{
+		.mesh = cube_mesh,
+		.transform = Transform{
+			.position = {-1.0f, -1.3f, 3.5f},
+			.scale = {1.0f, 1.4f, 1.0f}
+		},
+		.albedo_color = veekay::vec3{0.8f, 0.3f, 0.8f}
+	});
+
+	models.emplace_back(Model{
+		.mesh = cube_mesh,
+		.transform = Transform{
+			.position = {1.5f, -1.5f, 3.0f},
+			.scale = {0.7f, 1.0f, 0.7f}
+		},
+		.albedo_color = veekay::vec3{0.9f, 0.4f, 0.9f}
+	});
+
+	// Передние маленькие объекты
+	models.emplace_back(Model{
+		.mesh = cube_mesh,
+		.transform = Transform{
+			.position = {-0.8f, -1.8f, -2.5f},
+			.scale = {0.4f, 0.4f, 0.4f}
+		},
+		.albedo_color = veekay::vec3{0.95f, 0.8f, 0.3f}
+	});
+
+	models.emplace_back(Model{
+		.mesh = cube_mesh,
+		.transform = Transform{
+			.position = {0.8f, -1.8f, -2.8f},
+			.scale = {0.5f, 0.5f, 0.5f}
+		},
+		.albedo_color = veekay::vec3{0.3f, 0.9f, 0.9f}
 	});
 }
 
@@ -1049,6 +1156,8 @@ void shutdown() {
 		delete texture;
 		vkDestroySampler(device, texture_sampler, nullptr);
 	}
+
+	// wall_texture и wall_texture_sampler теперь указывают на те же объекты, не удаляем дважды
 
 	vkDestroySampler(device, missing_texture_sampler, nullptr);
 	delete missing_texture;
