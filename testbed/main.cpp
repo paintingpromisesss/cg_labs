@@ -27,10 +27,10 @@ struct Vertex {
 struct SceneUniforms {
 	veekay::mat4 view_projection;
 	veekay::mat4 light_view_projection;
-	veekay::vec4 light_direction; // xyz: direction from surface to light
-	veekay::vec4 light_color_intensity; // rgb: color, w: intensity
+	veekay::vec4 light_direction; // xyz: направление от поверхности к свету
+	veekay::vec4 light_color_intensity; // rgb: цвет, w: коэффициент яркости
 	veekay::vec4 camera_position;
-	veekay::vec4 ambient_color; // rgb + unused
+	veekay::vec4 ambient_color; // rgb + запасной компонент
 };
 
 struct ModelUniforms {
@@ -175,7 +175,7 @@ inline namespace {
 	veekay::graphics::Texture* texture;
 	VkSampler texture_sampler;
 
-	// Shadow mapping resources
+	// Ресурсы для карты теней
 	VkImage shadow_image;
 	VkDeviceMemory shadow_image_memory;
 	VkImageView shadow_image_view;
@@ -278,7 +278,7 @@ void createShadowResources() {
 	VkDevice& device = veekay::app.vk_device;
 	VkPhysicalDevice& physical_device = veekay::app.vk_physical_device;
 
-	// Create Shadow Image
+	// Создаём изображение для карты теней
 	{
 		VkImageCreateInfo info{
 			.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -326,7 +326,7 @@ void createShadowResources() {
 		vkBindImageMemory(device, shadow_image, shadow_image_memory, 0);
 	}
 
-	// Create Shadow Image View
+	// Создаём view для карты теней
 	{
 		VkImageViewCreateInfo info{
 			.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -347,7 +347,7 @@ void createShadowResources() {
 		}
 	}
 
-	// Create Shadow Sampler
+	// Настраиваем сэмплер карты теней
 	{
 		VkSamplerCreateInfo info{
 			.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -381,9 +381,9 @@ void createShadowPipeline() {
 			.module = shadow_vertex_shader_module,
 			.pName = "main",
 		},
-		// Fragment shader is optional for depth-only pass, but we can provide an empty one or omit it.
-		// If we omit it, we must ensure the pipeline is created correctly.
-		// For simplicity, let's use the empty fragment shader we created.
+		// Фрагментный шейдер для depth-прохода не обязателен, можно пустой или вовсе без него.
+		// Если убрать его совсем, придётся аккуратно настраивать создание пайплайна.
+		// Чтобы не усложнять, подключаем пустой фрагментный шейдер.
 		{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
 			.stage = VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -422,7 +422,7 @@ void createShadowPipeline() {
 		.depthClampEnable = VK_FALSE,
 		.rasterizerDiscardEnable = VK_FALSE,
 		.polygonMode = VK_POLYGON_MODE_FILL,
-		.cullMode = VK_CULL_MODE_FRONT_BIT, // Cull front faces for shadow mapping to fix peter panning
+		.cullMode = VK_CULL_MODE_FRONT_BIT, // Отбрасываем фронтальные грани, чтобы уменьшить peter panning
 		.frontFace = VK_FRONT_FACE_CLOCKWISE,
 		.depthBiasEnable = VK_TRUE,
 		.depthBiasConstantFactor = 4.0f,
@@ -469,7 +469,7 @@ void createShadowPipeline() {
 		.pScissors = &scissor,
 	};
 
-	// Reuse descriptor set layout as it contains the matrices we need
+	// Используем тот же layout, потому что там уже описаны нужные матрицы
 	VkPipelineLayoutCreateInfo layout_info{
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
 		.setLayoutCount = 1,
