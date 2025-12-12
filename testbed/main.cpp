@@ -1027,7 +1027,7 @@ void initialize(VkCommandBuffer cmd) {
 	models.emplace_back(Model{
 		.mesh = cube_mesh,
 		.transform = Transform{
-			.position = {1.5f, -0.5f, -0.5f},
+			.position = {1.5f, -1.0f, -0.5f},
 		},
 		.albedo_color = veekay::vec3{0.0f, 1.0f, 0.0f}
 	});
@@ -1147,9 +1147,6 @@ void shutdown() {
 	ImGui::SliderFloat3("Target", &directional_light.target.x, -5.0f, 5.0f);
 	ImGui::ColorEdit3("Color", &directional_light.color.x);
 	ImGui::SliderFloat("Intensity", &directional_light.intensity, 0.0f, 5.0f);
-	ImGui::SliderFloat("Shadow half extent", &directional_light.shadow_half_extent, 2.0f, 30.0f);
-	ImGui::SliderFloat("Shadow near", &directional_light.near_plane, 0.1f, 5.0f);
-	ImGui::SliderFloat("Shadow far", &directional_light.far_plane, 5.0f, 80.0f);
 	static veekay::vec3 ambient = {0.2f, 0.2f, 0.25f};
 	ImGui::ColorEdit3("Ambient", &ambient.x);
 	ImGui::End();
