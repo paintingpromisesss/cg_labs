@@ -19,8 +19,8 @@
 
 namespace {
 
-constexpr uint32_t window_default_width = 1280;
-constexpr uint32_t window_default_height = 720;
+constexpr uint32_t window_default_width = 1920;
+constexpr uint32_t window_default_height = 1080;
 constexpr char window_title[] = "Veekay";
 
 constexpr uint32_t max_frames_in_flight = 2;
@@ -78,7 +78,7 @@ int veekay::run(const veekay::ApplicationInfo& app_info) {
 	}
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
 	window = glfwCreateWindow(window_default_width, window_default_height,
 	                          window_title, nullptr, nullptr);
@@ -86,9 +86,14 @@ int veekay::run(const veekay::ApplicationInfo& app_info) {
 		std::cerr << "Failed to create GLFW window\n";
 		return 1;
 	}
+    
+    glfwSetWindowSize(window, window_default_width, window_default_height);
+    glfwSetWindowSizeLimits(window, window_default_width, window_default_height, window_default_width, window_default_height);
 
-	veekay::app.window_width = window_default_width;
-	veekay::app.window_height = window_default_height;
+    glfwPollEvents();
+
+	veekay::app.window_width = static_cast<uint32_t>(window_default_width);
+	veekay::app.window_height = static_cast<uint32_t>(window_default_height);
 
 	{ // NOTE: Initialize Vulkan: grab device and create swapchain
 		vkb::InstanceBuilder instance_builder;
