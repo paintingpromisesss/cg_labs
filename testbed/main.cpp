@@ -831,7 +831,6 @@ void initialize(VkCommandBuffer cmd) {
 		                                                pixels);
 	}
 
-	// Load texture (wall texture for all objects)
 	{
 		std::vector<unsigned char> image;
 		unsigned width, height;
@@ -840,7 +839,6 @@ void initialize(VkCommandBuffer cmd) {
 		if (error) {
 			std::cerr << "decoder error " << error << ": " << lodepng_error_text(error) << std::endl;
 			std::cerr << "Trying alternative path..." << std::endl;
-			// Попробуем альтернативный путь
 			error = lodepng::decode(image, width, height, "./lab3/assets/wood.png");
 			if (error) {
 				std::cerr << "decoder error " << error << ": " << lodepng_error_text(error) << std::endl;
